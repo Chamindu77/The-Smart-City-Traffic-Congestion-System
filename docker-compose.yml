@@ -1,0 +1,158 @@
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - traffic_net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - traffic_net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: traffic_user
+      POSTGRES_PASSWORD: traffic_pass
+      POSTGRES_DB: traffic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - traffic_net
+
+  spark-master:
+    image: apache/spark-py:v3.4.0
+    container_name: spark-master
+    user: root
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - traffic_net
+
+  spark-worker:
+    image: apache/spark-py:v3.4.0
+    container_name: spark-worker
+    user: root
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_WEBUI_PORT: 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - traffic_net
+
+  # ── Airflow: init db + create admin user (runs once then exits) ──
+  airflow-init:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: airflow-init
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://traffic_user:traffic_pass@postgres/traffic_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'smartcity2024secret'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'psycopg2-binary pandas matplotlib'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./reports:/opt/airflow/reports
+      - airflow_logs:/opt/airflow/logs
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@smartcity.com
+        echo "Airflow init complete"
+    restart: "no"
+    networks:
+      - traffic_net
+
+  # ── Airflow Webserver ──
+  airflow-webserver:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: airflow-webserver
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://traffic_user:traffic_pass@postgres/traffic_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'smartcity2024secret'
+      AIRFLOW__WEBSERVER__WORKERS: '1'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'psycopg2-binary pandas matplotlib'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./reports:/opt/airflow/reports
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8082:8080"
+    command: webserver
+    restart: on-failure
+    networks:
+      - traffic_net
+
+  # ── Airflow Scheduler ──
+  airflow-scheduler:
+    image: apache/airflow:2.7.3-python3.10
+    container_name: airflow-scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://traffic_user:traffic_pass@postgres/traffic_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'smartcity2024secret'
+      _PIP_ADDITIONAL_REQUIREMENTS: 'psycopg2-binary pandas matplotlib'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./reports:/opt/airflow/reports
+      - airflow_logs:/opt/airflow/logs
+    command: scheduler
+    restart: on-failure
+    networks:
+      - traffic_net
+
+networks:
+  traffic_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  airflow_logs:

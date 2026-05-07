@@ -1,0 +1,9 @@
+sensor_id,hour,total_vehicles,avg_speed_kmh,report_date
+Junction_Kollupitiya,00:00,37557,38.4,2026-05-06
+Junction_Kollupitiya,01:00,47802,38.7,2026-05-06
+Junction_Maharagama,00:00,55025,28.5,2026-05-06
+Junction_Maharagama,01:00,70173,28.9,2026-05-06
+Junction_Nugegoda,00:00,48028,28.2,2026-05-06
+Junction_Nugegoda,01:00,61689,29.3,2026-05-06
+Junction_Pettah,00:00,41893,34.3,2026-05-06
+Junction_Pettah,01:00,55376,33.3,2026-05-06
