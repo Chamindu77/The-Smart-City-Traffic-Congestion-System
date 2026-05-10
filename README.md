@@ -169,7 +169,7 @@ The pipeline generates 5 output files in the `reports/` directory:
 
 ---
 
-- Chart 02 - Congestion index trend by junction
+- Chart 03 - Congestion index trend by junction
 <img width="2082" height="879" alt="congestion_index_2026-05-10" src="https://github.com/user-attachments/assets/9f0e5600-1012-4e3d-a24b-9e6d7d4120e7" />
 
 ---
