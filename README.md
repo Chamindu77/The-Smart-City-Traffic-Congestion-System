@@ -15,21 +15,22 @@
 
 ## 📋 Table of Contents
 
-- [Project Overview](#-project-overview)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-- [Pipeline Components](#-pipeline-components)
-- [Database Schema](#-database-schema)
-- [Analytic Reports](#-analytic-reports)
-- [Event Time vs Processing Time](#-event-time-vs-processing-time)
-- [Ethics & Data Governance](#-ethics--data-governance)
-- [Deliverables](#-deliverables)
+- [Project Overview](#1)
+- [Architecture](#2)
+- [Tech Stack](#3)
+- [Project Structure](#4)
+- [Analytic Reports](#5)
+- [Prerequisites](#6)
+- [Quick Start](#7)
+- [Pipeline Components](#8)
+- [Database Schema](#9)
+- [Event Time vs Processing Time](#10)
+- [Ethics & Data Governance](#11)
+- [Useful Commands](#12)
 
 ---
 
+<a id="1"></a>
 ## 🎯 Project Overview
 
 A real-world end-to-end **Lambda Architecture** data pipeline that simulates IoT traffic sensors at **4 major Colombo junctions**, processes sensor data in real time to detect congestion, and generates nightly reports recommending where traffic police should be deployed.
@@ -55,18 +56,19 @@ A fully automated pipeline that:
 
 ---
 
+<a id="2"></a>
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    DATA SOURCE LAYER                         │
+│                    DATA SOURCE LAYER                        │
 │  [Pettah] [Kollupitiya] [Nugegoda] [Maharagama]             │
 │         Python producer.py — 1 event/sec each               │
 └──────────────────────┬──────────────────────────────────────┘
                        │ JSON: {sensor_id, timestamp,
                        │        vehicle_count, avg_speed}
 ┌──────────────────────▼──────────────────────────────────────┐
-│                   APACHE KAFKA                               │
+│                   APACHE KAFKA                              │
 │     Topic: traffic-raw · 4 partitions · fault-tolerant      │
 └────────┬──────────────────────────────────────┬─────────────┘
          │                                      │
@@ -78,24 +80,27 @@ A fully automated pipeline that:
 │ Q2 → alerts (5s)      │          │ Task1: aggregate_peak    │
 │ Q3 → 5-min windows    │          │ Task2: generate_report   │
 │      (event time)     │          │ Task3: save_to_database  │
-└────────┬──────────────┘          └────────────┬────────────┘
-         │                                      │
-┌────────▼──────────────────────────────────────▼────────────┐
-│                  SERVING LAYER — PostgreSQL                  │
-│  traffic_events │ critical_traffic │ congestion_index │      │
-│                              daily_peak_report               │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                   ANALYTIC OUTPUT                            │
+└────────┬──────────────┘          └────────────┬─────────────┘
+│        │                                      │             │
+│    ┌───▼──────────────────────────────────────▼──────────┐  │
+│    │             SERVING LAYER — PostgreSQL              │  │
+│    │traffic_events │ critical_traffic │ congestion_index │  │
+│    │                 daily_peak_report                   │  │
+│    └─────────────────┬───────────────────────────────────┘  │
+│                      │                                      │
+▼──────────────────────▼──────────────────────────────────────▼
+│                   ANALYTIC OUTPUT                           │
 │  traffic_volume_by_hour.png  │  traffic_comparison.png      │
-│  congestion_index.png        │  police_deployment.txt        │
-│  traffic_report.csv                                          │
+│  congestion_index.png        │  police_deployment.txt       │
+│  traffic_report.csv                                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
+<img width="1670" height="942" alt="ChatGPT Image May 10, 2026, 04_15_06 PM" src="https://github.com/user-attachments/assets/0f0add09-f55f-4125-a681-b48e4e168675" />
+
 ---
 
+<a id="3"></a>
 ## 🛠️ Tech Stack
 
 | Component | Technology | Purpose |
@@ -110,6 +115,7 @@ A fully automated pipeline that:
 
 ---
 
+<a id="4"></a>
 ## 📁 Project Structure
 
 ```
@@ -132,8 +138,8 @@ smart_city_traffic/
 ├── airflow/
 │   ├── dags/
 │   │   └── traffic_dag.py          # Nightly batch DAG (3 tasks)
-│   ├── generate_report.py          # Report generation script
-│   └── generate_chart_fixed.py     # Chart generation script
+│   └── generate_report.py          # Report generation script
+│   
 │
 ├── db/
 │   └── init.sql                    # PostgreSQL schema (4 tables)
@@ -148,6 +154,66 @@ smart_city_traffic/
 
 ---
 
+<a id="5"></a>
+## 📊 Analytic Reports
+
+The pipeline generates 5 output files in the `reports/` directory:
+
+- Chart 01 - Vehicle count per hour per junction
+<img width="2384" height="1772" alt="traffic_volume_by_hour_2026-05-10" src="https://github.com/user-attachments/assets/1d6ba68f-48ae-4a6c-9a12-445432de122e" />
+
+---
+
+- Chart 02 - All 4 junctions on single comparison chart
+<img width="2082" height="1030" alt="traffic_comparison_2026-05-10" src="https://github.com/user-attachments/assets/858409fa-b6a5-4803-8c3a-38bb2f735bfe" />
+
+---
+
+- Chart 02 - Congestion index trend by junction
+<img width="2082" height="879" alt="congestion_index_2026-05-10" src="https://github.com/user-attachments/assets/9f0e5600-1012-4e3d-a24b-9e6d7d4120e7" />
+
+---
+
+- CSV - Hourly vehicle counts (machine-readable)
+<img width="1141" height="775" alt="image" src="https://github.com/user-attachments/assets/bcb6413a-4e9c-4507-b08d-32767f87ce99" />
+
+---
+
+- Text Report - Police deployment plan for next day
+<img width="652" height="1032" alt="image" src="https://github.com/user-attachments/assets/e5072c75-08eb-4391-910a-6cefb869573f" />
+
+---
+
+- Airflow Dag Image
+<img width="1918" height="852" alt="Screenshot 2026-05-10 125555" src="https://github.com/user-attachments/assets/55f2bdaa-e607-4384-9d92-2f7eeaeadb3c" />
+
+---
+
+
+**Sample police deployment report:**
+```
+============================================================
+  SMART CITY COLOMBO - NIGHTLY TRAFFIC REPORT
+  Generated: 2026-05-09 19:32:41
+============================================================
+Junction  : Junction_Maharagama
+Peak Hour : 19:00 - 20:00
+Vehicles  : 205,377
+Avg Speed : 29.8 km/h
+Alerts    : 3 critical alerts
+Status    : POLICE DEPLOYMENT RECOMMENDED
+------------------------------------------------------------
+POLICE DEPLOYMENT PLAN FOR TOMORROW
+============================================================
+  -> Deploy to Junction_Maharagama  by 19:00
+  -> Deploy to Junction_Nugegoda    by 17:00
+  -> Deploy to Junction_Pettah      by 19:00
+  -> Deploy to Junction_Kollupitiya by 19:00
+```
+
+---
+
+<a id="6"></a>
 ## ✅ Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (4GB+ RAM allocated)
@@ -162,12 +228,13 @@ pip install kafka-python psycopg2-binary matplotlib pyspark==3.4.0
 
 ---
 
+<a id="7"></a>
 ## 🚀 Quick Start
 
 ### Step 1 — Clone and start infrastructure
 
 ```bash
-git clone https://github.com/yourusername/smart_city_traffic.git
+git clone https://github.com/chamindu77/The-Smart-City-Traffic-Congestion-System.git
 cd smart_city_traffic
 
 # Start all 7 Docker containers
@@ -257,6 +324,7 @@ docker cp airflow-scheduler:/opt/airflow/reports/. reports/
 
 ---
 
+<a id="8"></a>
 ## 🔧 Pipeline Components
 
 ### 1. Kafka Producer (`producer/producer.py`)
@@ -308,6 +376,7 @@ docker exec -it airflow-scheduler airflow dags trigger smart_city_traffic_nightl
 
 ---
 
+<a id="9"></a>
 ## 🗄️ Database Schema
 
 ```sql
@@ -359,41 +428,7 @@ CREATE TABLE daily_peak_report (
 
 ---
 
-## 📊 Analytic Reports
-
-The pipeline generates 5 output files in the `reports/` directory:
-
-| File | Type | Content |
-|---|---|---|
-| `traffic_volume_by_hour_YYYY-MM-DD.png` | Chart | Vehicle count per hour per junction |
-| `traffic_comparison_YYYY-MM-DD.png` | Chart | All 4 junctions on single comparison chart |
-| `congestion_index_YYYY-MM-DD.png` | Chart | Congestion index trend by junction |
-| `traffic_report_YYYY-MM-DD.csv` | CSV | Hourly vehicle counts (machine-readable) |
-| `police_deployment_YYYY-MM-DD.txt` | Text | Police deployment plan for next day |
-
-**Sample police deployment report:**
-```
-============================================================
-  SMART CITY COLOMBO - NIGHTLY TRAFFIC REPORT
-  Generated: 2026-05-09 19:32:41
-============================================================
-Junction  : Junction_Maharagama
-Peak Hour : 19:00 - 20:00
-Vehicles  : 205,377
-Avg Speed : 29.8 km/h
-Alerts    : 3 critical alerts
-Status    : POLICE DEPLOYMENT RECOMMENDED
-------------------------------------------------------------
-POLICE DEPLOYMENT PLAN FOR TOMORROW
-============================================================
-  -> Deploy to Junction_Maharagama  by 19:00
-  -> Deploy to Junction_Nugegoda    by 17:00
-  -> Deploy to Junction_Pettah      by 19:00
-  -> Deploy to Junction_Kollupitiya by 19:00
-```
-
----
-
+<a id="10"></a>
 ## ⏱️ Event Time vs Processing Time
 
 A key concept in this pipeline is how time is handled for windowing:
@@ -417,6 +452,7 @@ parsed_df
 
 ---
 
+<a id="11"></a>
 ## ⚖️ Ethics & Data Governance
 
 This system handles urban surveillance data. The following governance principles apply:
@@ -432,20 +468,7 @@ This system handles urban surveillance data. The following governance principles
 
 ---
 
-## 📦 Deliverables
-
-| # | Deliverable | File | Status |
-|---|---|---|---|
-| 1 | Architecture Diagram | `architecture.png` | ✅ |
-| 2a | Kafka Producer | `producer/producer.py` | ✅ |
-| 2b | Spark Streaming | `spark_jobs/stream_processor.py` | ✅ |
-| 2c | Airflow DAG | `airflow/dags/traffic_dag.py` | ✅ |
-| 2d | Docker Compose | `docker-compose.yml` | ✅ |
-| 3 | Analytic Report | `reports/*.png` + `reports/*.csv` | ✅ |
-| 4 | Project Report | `EC8207_Smart_City_Project_Report.pdf` | ✅ |
-
----
-
+<a id="12"></a>
 ## 🔍 Useful Commands
 
 ```bash
@@ -483,33 +506,6 @@ docker-compose down -v
 
 ---
 
-## 📈 Sample Results
-
-After running the pipeline for ~2 hours:
-
-```
-Table              | Count
--------------------+--------
-traffic_events     | 49,846
-critical_traffic   |     26   ← occasional alerts ✅
-congestion_index   |    955
-```
-
-**Peak congestion results:**
-```
-Junction_Maharagama  → Congestion Index: 149.85 (highest) 🚔
-Junction_Nugegoda    → Congestion Index: 119.60           🚔
-Junction_Pettah      → Congestion Index:  89.70           🚔
-Junction_Kollupitiya → Congestion Index:  68.40           🚔
-```
-
-All junctions exceed the police deployment threshold of **8.0**.
-
----
-
-## 📄 License
-
-This project is submitted as academic coursework for EC8207 Applied Big Data Engineering.
 
 ---
 
