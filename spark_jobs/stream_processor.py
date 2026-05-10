@@ -1,22 +1,3 @@
-"""
-=============================================================
- Smart City Traffic - Spark Structured Streaming Processor
- Runs INSIDE spark-master container via spark-submit
-=============================================================
- What this does:
-   1. Reads traffic-raw topic from Kafka continuously
-   2. Uses EVENT TIME (sensor timestamp) for windowing
-      - Event Time  = timestamp IN the sensor JSON message
-      - Processing Time = when Spark receives the message
-      - We use Event Time + watermark so late data lands
-        in the correct 5-min window, not the current one
-   3. Three parallel streaming queries:
-      Q1 → Every raw event         → traffic_events table
-      Q2 → speed < 10 km/h alert  → critical_traffic table
-      Q3 → 5-min tumbling window  → congestion_index table
-=============================================================
-"""
-
 import logging
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -25,7 +6,7 @@ from pyspark.sql.types import (
     StringType, IntegerType, FloatType
 )
 
-# ── Logging ────────────────────────────────────────────────
+# Logging 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -33,7 +14,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("SparkStreamProcessor")
 
-# ── Config — Docker internal hostnames ────────────────────
+# Config — Docker internal hostnames
 KAFKA_BROKER   = "kafka:9092"
 KAFKA_TOPIC    = "traffic-raw"
 PG_URL         = "jdbc:postgresql://postgres:5432/traffic_db"
@@ -43,10 +24,10 @@ PG_PROPS       = {
     "driver":   "org.postgresql.Driver"
 }
 CRITICAL_SPEED = 10.0
-WINDOW_SIZE    = "1 minutes"
-WATERMARK      = "2 minutes"
+WINDOW_SIZE    = "5 minutes"
+WATERMARK      = "10 minutes"
 
-# ── Schema matching producer JSON ─────────────────────────
+# Schema matching producer JSON 
 SCHEMA = StructType([
     StructField("sensor_id",     StringType(),  True),
     StructField("timestamp",     StringType(),  True),
@@ -66,7 +47,7 @@ def create_spark():
         .getOrCreate()
     )
     spark.sparkContext.setLogLevel("ERROR")
-    log.info("✅ Spark session ready")
+    log.info("Spark session ready")
     return spark
 
 
@@ -90,19 +71,15 @@ def get_parsed_stream(spark):
             F.from_json(F.col("value").cast("string"), SCHEMA).alias("d")
         )
         .select("d.*")
-        # EVENT TIME: timestamp comes FROM the sensor, not from Spark
         .withColumn("event_time", F.to_timestamp("timestamp"))
         .withColumn("ingested_at", F.current_timestamp())
         .filter(F.col("sensor_id").isNotNull())
     )
-    log.info("✅ Kafka stream parsed with schema")
+    log.info("Kafka stream parsed with schema")
     return parsed
 
 
-# ──────────────────────────────────────────────────────────
 # QUERY 1 — Raw events → traffic_events
-# Stores every single message as-is. No windowing.
-# ──────────────────────────────────────────────────────────
 def start_raw_stream(parsed):
     def write_batch(df, batch_id):
         count = df.count()
@@ -127,11 +104,8 @@ def start_raw_stream(parsed):
     )
 
 
-# ──────────────────────────────────────────────────────────
+
 # QUERY 2 — Critical alerts → critical_traffic
-# IMMEDIATE write when avg_speed < 10 km/h.
-# No windowing — pure real-time path.
-# ──────────────────────────────────────────────────────────
 def start_alerts_stream(parsed):
     alerts = parsed.filter(F.col("avg_speed") < CRITICAL_SPEED)
 
@@ -164,28 +138,9 @@ def start_alerts_stream(parsed):
     )
 
 
-# ──────────────────────────────────────────────────────────
+
 # QUERY 3 — 5-min tumbling window → congestion_index
-#
-# EVENT TIME vs PROCESSING TIME (key concept for report):
-#   Event Time     = timestamp embedded in sensor JSON
-#                    = when the vehicle was actually counted
-#   Processing Time = when Spark processes the message
-#
-#   withWatermark("event_time", "10 minutes")
-#     → Spark waits up to 10 mins for late-arriving data
-#     → A message delayed by 8 mins still lands in the
-#       correct 5-min window based on its sensor timestamp
-#
-#   window("event_time", "5 minutes")
-#     → Groups by 5-min buckets using sensor timestamp
-#     → NOT by Spark receive time
-#
-#   congestion_index = total_vehicles / avg_speed
-#     → Higher = heavier congestion
-#     → e.g. 300 vehicles at 5 km/h = index 60 (severe)
-#     → e.g. 300 vehicles at 50 km/h = index 6 (light)
-# ──────────────────────────────────────────────────────────
+
 def start_congestion_stream(parsed):
     windowed = (
         parsed
@@ -218,7 +173,7 @@ def start_congestion_stream(parsed):
             return
         for r in df.collect():
             log.info(
-                "📊 [Window] %s→%s | %-28s | "
+                "[Window] %s→%s | %-28s | "
                 "vehicles: %4d | speed: %5.1f | idx: %.2f",
                 r["window_start"].strftime("%H:%M"),
                 r["window_end"].strftime("%H:%M"),
@@ -258,7 +213,7 @@ def main():
     q2 = start_alerts_stream(stream)
     q3 = start_congestion_stream(stream)
 
-    log.info("✅ All 3 streams active:")
+    log.info("   All 3 streams active:")
     log.info("   Q1 → Every raw event  → traffic_events    (every 10s)")
     log.info("   Q2 → speed < 10 km/h → critical_traffic  (every  5s)")
     log.info("   Q3 → 5-min windows   → congestion_index  (every 30s)")
