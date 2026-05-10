@@ -1,18 +1,3 @@
-"""
-=============================================================
- Smart City Traffic — Analytic Report Generator
- Step 5: Traffic Volume vs Time of Day Chart
-=============================================================
- What this does:
-   Reads traffic_events from PostgreSQL
-   Generates a professional chart showing:
-   - Traffic Volume vs Time of Day per junction
-   - Highlights peak hours
-   - Marks critical alert periods
-   Saves as PNG to reports/ folder
-=============================================================
-"""
-
 import psycopg2
 import psycopg2.extras
 import matplotlib
@@ -23,7 +8,7 @@ import numpy as np
 from datetime import datetime
 import os
 
-# ── Database config ────────────────────────────────────────
+# Database config 
 DB = dict(
     host="localhost",
     port=5432,
@@ -36,7 +21,7 @@ REPORTS_DIR = "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
 today = datetime.now().strftime("%Y-%m-%d")
 
-# ── Junction colors ────────────────────────────────────────
+# Junction colors 
 COLORS = {
     "Junction_Pettah":      "#E74C3C",
     "Junction_Kollupitiya": "#3498DB",
@@ -142,9 +127,9 @@ def generate_charts():
 
     print(f"Found data for {len(hourly)} junctions")
 
-    # ══════════════════════════════════════════════════════
-    # FIGURE 1 — Traffic Volume vs Time of Day (main chart)
-    # ══════════════════════════════════════════════════════
+
+    # FIGURE 1 — Traffic Volume vs Time of Day 
+
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
     fig.suptitle(
         f"Smart City Colombo — Traffic Analysis Report\n{today}",
@@ -157,19 +142,15 @@ def generate_charts():
         color  = COLORS.get(sid, "#95A5A6")
         marker = MARKERS.get(sid, "o")
 
-        # Fill missing hours with 0
         hour_map = dict(zip(d["hours"], d["vehicles"]))
         vehicles = [hour_map.get(h, 0) for h in all_hours]
 
-        # Bar chart
         bars = ax.bar(all_hours, vehicles, color=color,
                       alpha=0.6, width=0.8, label="Vehicle Count")
 
-        # Line overlay
         ax.plot(all_hours, vehicles, color=color,
                 linewidth=2, marker=marker, markersize=5, zorder=5)
 
-        # Highlight alert hours in red
         if sid in alerts:
             for h, cnt in alerts[sid].items():
                 if h < 24:
@@ -182,7 +163,6 @@ def generate_charts():
                                 ha="center", fontsize=7,
                                 color="#C0392B", fontweight="bold")
 
-        # Peak hour marker
         if vehicles:
             peak_h = all_hours[vehicles.index(max(vehicles))]
             ax.axvline(x=peak_h, color="red",
@@ -201,7 +181,6 @@ def generate_charts():
         ax.grid(axis="y", alpha=0.3)
         ax.set_xlim(-0.5, 23.5)
 
-        # Legend
         normal_patch = mpatches.Patch(color=color, alpha=0.6, label="Normal Traffic")
         alert_patch  = mpatches.Patch(color="#E74C3C", alpha=0.8, label="Alert Period")
         ax.legend(handles=[normal_patch, alert_patch], fontsize=8)
@@ -212,9 +191,9 @@ def generate_charts():
     plt.close()
     print(f"✅ Chart 1 saved: {chart1_path}")
 
-    # ══════════════════════════════════════════════════════
+    
     # FIGURE 2 — All junctions comparison on one chart
-    # ══════════════════════════════════════════════════════
+    
     fig2, ax2 = plt.subplots(figsize=(14, 7))
     ax2.set_title(
         f"Traffic Volume Comparison — All Junctions\n{today}",
@@ -245,9 +224,9 @@ def generate_charts():
     plt.close()
     print(f"✅ Chart 2 saved: {chart2_path}")
 
-    # ══════════════════════════════════════════════════════
+    
     # FIGURE 3 — Congestion Index chart
-    # ══════════════════════════════════════════════════════
+    
     if cong:
         fig3, ax3 = plt.subplots(figsize=(14, 6))
         ax3.set_title(
