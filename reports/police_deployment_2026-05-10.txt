@@ -1,0 +1,44 @@
+============================================================
+  SMART CITY COLOMBO - NIGHTLY TRAFFIC REPORT
+  Generated: 2026-05-10 05:02:06.630105
+============================================================
+
+PEAK TRAFFIC SUMMARY
+------------------------------------------------------------
+Junction  : Junction_Maharagama
+Peak Hour : 19:00 - 20:00
+Vehicles  : 205,377
+Avg Speed : 29.8 km/h
+Alerts    : 9 critical alerts
+Status    : POLICE DEPLOYMENT RECOMMENDED
+------------------------------------------------------------
+Junction  : Junction_Nugegoda
+Peak Hour : 17:00 - 18:00
+Vehicles  : 183,168
+Avg Speed : 29.7 km/h
+Alerts    : 9 critical alerts
+Status    : POLICE DEPLOYMENT RECOMMENDED
+------------------------------------------------------------
+Junction  : Junction_Pettah
+Peak Hour : 19:00 - 20:00
+Vehicles  : 159,680
+Avg Speed : 34.9 km/h
+Alerts    : 11 critical alerts
+Status    : POLICE DEPLOYMENT RECOMMENDED
+------------------------------------------------------------
+Junction  : Junction_Kollupitiya
+Peak Hour : 19:00 - 20:00
+Vehicles  : 134,240
+Avg Speed : 40.0 km/h
+Alerts    : 9 critical alerts
+Status    : POLICE DEPLOYMENT RECOMMENDED
+------------------------------------------------------------
+
+POLICE DEPLOYMENT PLAN FOR TOMORROW
+============================================================
+  -> Deploy to Junction_Maharagama by 19:00
+  -> Deploy to Junction_Nugegoda by 17:00
+  -> Deploy to Junction_Pettah by 19:00
+  -> Deploy to Junction_Kollupitiya by 19:00
+
+============================================================
