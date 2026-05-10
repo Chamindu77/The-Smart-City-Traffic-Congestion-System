@@ -44,7 +44,7 @@ for row in all_rows:
             'needs_police':   True
         }
 
-# ── Police deployment text report ─────────────────────────
+# Police deployment text report 
 txt = os.path.join(REPORTS_DIR, f'police_deployment_{today}.txt')
 with open(txt, 'w') as f:
     f.write('=' * 60 + '\n')
@@ -67,7 +67,7 @@ with open(txt, 'w') as f:
         f.write(f"  -> Deploy to {r['sensor_id']} by {r['peak_hour']:02d}:00\n")
     f.write('\n' + '=' * 60 + '\n')
 
-# ── Hourly CSV report ──────────────────────────────────────
+# Hourly CSV report 
 cur.execute("""
     SELECT sensor_id,
            EXTRACT(HOUR FROM event_timestamp) AS hour,
@@ -88,7 +88,7 @@ with open(csv_path, 'w', newline='') as f:
         w.writerow([row['sensor_id'], f"{int(row['hour']):02d}:00",
                     row['total_vehicles'], row['avg_speed'], today])
 
-# ── Save to daily_peak_report table ───────────────────────
+# Save to daily_peak_report table 
 for r in peaks.values():
     cur.execute("""
         INSERT INTO daily_peak_report
