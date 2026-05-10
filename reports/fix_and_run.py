@@ -1,5 +1,0 @@
-content = open('/tmp/generate_chart.py').read()
-content = content.replace('host="localhost"', 'host="postgres"')
-content = content.replace('REPORTS_DIR = "reports"', 'REPORTS_DIR = "/opt/airflow/reports"')
-open('/opt/airflow/generate_chart_fixed.py', 'w').write(content)
-print('Fixed script written successfully')
